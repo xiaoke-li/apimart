@@ -568,7 +568,7 @@ function updateImgHint() {
 async function uploadImg(file) {
   const fd = new FormData(); fd.append('file', file);
   const r = await fetch('https://api.apimart.ai/v1/uploads/images', {
-    method:'POST', headers:{'Authorization':`Bearer ${apiKey}`}, body:fd
+    method:'POST', headers:{'Authorization':`${apiKey}`}, body:fd
   });
   const text = await r.text();
   let j;
@@ -607,7 +607,7 @@ async function doGenerate() {
 
     const r = await fetch('https://api.apimart.ai/v1/videos/generations', {
       method:'POST',
-      headers:{'Authorization':`Bearer ${apiKey}`,'Content-Type':'application/json'},
+      headers:{'Authorization':`${apiKey}`,'Content-Type':'application/json'},
       body: JSON.stringify(body)
     });
     const j = await r.json();
@@ -652,7 +652,7 @@ function startPolling(taskId, localId) {
     const prog = Math.min(10 + attempts*5, 90);
     try {
       const r = await fetch(`https://api.apimart.ai/v1/tasks/${taskId}?language=zh`, {
-        headers: {'Authorization':`Bearer ${apiKey}`}
+        headers: {'Authorization':`${apiKey}`}
       });
       const j = await r.json();
       const d = j.data;
