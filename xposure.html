@@ -571,8 +571,10 @@ async function uploadImg(file) {
     method:'POST', headers:{'Authorization':`Bearer ${apiKey}`}, body:fd
   });
   const j = await r.json();
-  if (j.code!==200) throw new Error(j.message||'图片上传失败');
-  return j.data?.url || j.data?.[0]?.url;
+  // APIMart upload returns url at root or nested in data
+  const url = j.url || j.data?.url || j.data?.[0]?.url;
+  if (!url) throw new Error(j.message || '图片上传失败，未获取到URL');
+  return url;
 }
 
 // ── Generate ──────────────────────────────────────────────
