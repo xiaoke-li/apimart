@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NFVid · AI Video Studio</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #080809;
+  --surface: #111113;
+  --surface2: #191920;
+  --border: rgba(255,255,255,0.07);
+  --border-mid: rgba(255,255,255,0.13);
+  --border-hi: rgba(255,255,255,0.22);
+  --text: #f2efe9;
+  --text-2: #999;
+  --text-3: #555;
+  --accent: #b8ff57;
+  --accent-dim: rgba(184,255,87,0.1);
+  --accent-border: rgba(184,255,87,0.25);
+  --red: #ff5f5f;
+  --red-dim: rgba(255,95,95,0.1);
+  --amber: #ffb347;
+  --amber-dim: rgba(255,179,71,0.1);
+  --blue: #5b9fff;
+  --blue-dim: rgba(91,159,255,0.1);
+  --r: 10px;
+  --r-lg: 16px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;min-height:100vh;}
+
+/* ── CONFIG BANNER ── */
+#configBanner{background:linear-gradient(135deg,#1a1a2e,#16213e);border-bottom:1px solid rgba(91,159,255,0.2);padding:12px 24px;display:flex;align-items:center;gap:12px;font-size:13px;color:var(--blue);}
+#configBanner a{color:var(--accent);text-decoration:underline;cursor:pointer;}
+
+/* ── LOGIN ── */
+#loginScreen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;}
+.login-box{width:360px;text-align:center;}
+.login-logo{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:4px;}
+.login-logo span{color:var(--accent);}
+.login-sub{font-size:12px;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:36px;}
+.login-card{background:var(--surface);border:1px solid var(--border-mid);border-radius:var(--r-lg);padding:28px;}
+.login-tabs{display:flex;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:4px;margin-bottom:24px;}
+.login-tab{flex:1;padding:7px;border:none;border-radius:6px;background:transparent;color:var(--text-3);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;}
+.login-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.4);}
+.login-field{margin-bottom:16px;text-align:left;}
+.login-field label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:6px;}
+.login-field input{width:100%;background:var(--surface2);border:1px solid var(--border-mid);border-radius:var(--r);padding:11px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s;}
+.login-field input:focus{border-color:var(--border-hi);}
+.login-field input::placeholder{color:var(--text-3);}
+.login-btn{width:100%;padding:13px;background:var(--accent);color:#080809;border:none;border-radius:var(--r);font-family:'Syne',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.01em;}
+.login-btn:hover{background:#c8ff6e;transform:translateY(-1px);}
+.login-err{font-size:12px;color:var(--red);margin-top:10px;min-height:18px;}
+
+/* ── APP SHELL ── */
+#appShell{display:none;}
+.topbar{height:52px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;position:sticky;top:0;background:rgba(8,8,9,.9);backdrop-filter:blur(12px);z-index:50;}
+.topbar-logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;letter-spacing:-0.02em;flex:1;}
+.topbar-logo span{color:var(--accent);}
+.topbar-user{font-size:12px;color:var(--text-3);}
+.topbar-badge{font-size:11px;padding:3px 10px;border-radius:100px;background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);}
+.topbar-btn{padding:6px 14px;background:transparent;border:1px solid var(--border-mid);border-radius:var(--r);color:var(--text-2);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .15s;}
+.topbar-btn:hover{border-color:var(--border-hi);color:var(--text);}
+
+.layout{display:grid;grid-template-columns:420px 1fr;gap:0;height:calc(100vh - 52px);overflow:hidden;}
+
+/* ── LEFT PANEL ── */
+.left-panel{border-right:1px solid var(--border);overflow-y:auto;padding:24px;}
+.left-panel::-webkit-scrollbar{width:3px;}
+.left-panel::-webkit-scrollbar-thumb{background:var(--border-mid);}
+
+.panel-section{margin-bottom:24px;}
+.section-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:12px;font-weight:500;}
+
+/* Model tabs */
+.model-tabs{display:flex;gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:3px;margin-bottom:24px;}
+.model-tab-btn{flex:1;padding:8px 6px;border:none;border-radius:7px;background:transparent;color:var(--text-3);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:500;}
+.model-tab-btn.active{background:var(--surface);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.4);}
+.model-tab-btn:hover:not(.active){color:var(--text-2);}
+
+/* Form fields */
+.field{margin-bottom:18px;}
+.field-label{font-size:12px;color:var(--text-2);margin-bottom:7px;display:flex;align-items:center;gap:6px;}
+.req{font-size:10px;color:var(--accent);}
+.opt{font-size:10px;color:var(--text-3);}
+textarea,input[type=text]{width:100%;background:var(--surface2);border:1px solid var(--border-mid);border-radius:var(--r);padding:11px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;outline:none;transition:border-color .2s;resize:vertical;}
+textarea:focus,input[type=text]:focus{border-color:var(--border-hi);}
+textarea::placeholder,input::placeholder{color:var(--text-3);}
+
+/* Segment */
+.seg{display:flex;gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:3px;}
+.seg-btn{flex:1;padding:6px 8px;border:none;border-radius:6px;background:transparent;color:var(--text-3);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.seg-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.4);}
+
+.param-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.param-item label{font-size:11px;color:var(--text-3);display:block;margin-bottom:5px;}
+
+/* Upload zones */
+.upload-zone{border:1px dashed var(--border-mid);border-radius:var(--r);padding:18px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.upload-zone:hover,.upload-zone.over{border-color:var(--border-hi);background:rgba(255,255,255,.02);}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-icon{font-size:20px;margin-bottom:4px;}
+.upload-txt{font-size:12px;color:var(--text-2);}
+.upload-hint{font-size:11px;color:var(--text-3);margin-top:2px;}
+
+/* Image preview */
+.img-preview{position:relative;width:100%;aspect-ratio:9/16;max-width:160px;margin:0 auto;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.img-preview.wide{aspect-ratio:16/9;max-width:100%;}
+.img-preview img{width:100%;height:100%;object-fit:cover;}
+.img-preview-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-3);font-size:12px;gap:6px;}
+.img-preview-empty span{font-size:22px;}
+.img-rm{position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.75);border:none;color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.img-rm:hover{background:var(--red);}
+
+/* VEO首尾帧 frame upload grid */
+.frame-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
+.frame-slot{}
+.frame-slot label{font-size:11px;color:var(--text-3);display:block;margin-bottom:5px;}
+.frame-upload{border:1px dashed var(--border-mid);border-radius:var(--r);padding:10px;text-align:center;cursor:pointer;position:relative;aspect-ratio:9/16;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:all .2s;}
+.frame-upload:hover,.frame-upload.over{border-color:var(--border-hi);background:rgba(255,255,255,.02);}
+.frame-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.frame-upload img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:8px;}
+.frame-upload .fup-icon{font-size:18px;color:var(--text-3);}
+.frame-upload .fup-lbl{font-size:11px;color:var(--text-3);}
+.frame-upload .fup-rm{position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.8);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;}
+
+/* VEO多参考图 grid */
+.ref-img-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;}
+.ref-img-item{position:relative;aspect-ratio:1;background:var(--surface2);border:1px dashed var(--border-mid);border-radius:8px;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.ref-img-item:hover{border-color:var(--border-hi);}
+.ref-img-item input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.ref-img-item img{width:100%;height:100%;object-fit:cover;}
+.ref-img-item .slot-plus{font-size:20px;color:var(--text-3);}
+.ref-img-item .slot-rm{position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.8);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;}
+
+/* Cost & submit */
+.submit-row{display:flex;align-items:center;gap:10px;margin-top:4px;}
+.gen-btn{flex:1;padding:13px;background:var(--accent);color:#080809;border:none;border-radius:var(--r);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.01em;}
+.gen-btn:hover:not(:disabled){background:#c8ff6e;transform:translateY(-1px);}
+.gen-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+
+.tip{font-size:11px;color:var(--text-3);margin-top:6px;line-height:1.5;}
+.tip.warn{color:var(--amber);}
+
+/* ── RIGHT PANEL ── */
+.right-panel{overflow-y:auto;display:flex;flex-direction:column;}
+.right-panel::-webkit-scrollbar{width:3px;}
+.right-panel::-webkit-scrollbar-thumb{background:var(--border-mid);}
+
+.tasks-header{padding:18px 24px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;position:sticky;top:0;background:rgba(8,8,9,.95);backdrop-filter:blur(8px);z-index:10;}
+.tasks-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:600;flex:1;}
+.tasks-count{font-size:12px;color:var(--text-3);}
+.refresh-btn{width:28px;height:28px;border:1px solid var(--border-mid);border-radius:7px;background:transparent;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s;}
+.refresh-btn:hover{border-color:var(--border-hi);color:var(--text);}
+
+.tasks-body{padding:16px 24px;flex:1;}
+.tasks-empty{text-align:center;padding:60px 20px;color:var(--text-3);font-size:13px;}
+.tasks-empty-icon{font-size:32px;margin-bottom:12px;opacity:.4;}
+
+/* Task card */
+.task-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;margin-bottom:12px;transition:border-color .15s;}
+.task-card:hover{border-color:var(--border-mid);}
+.task-card.active-task{border-color:var(--accent-border);}
+.task-header{padding:14px 16px;display:flex;align-items:flex-start;gap:12px;}
+.task-avatar{width:28px;height:28px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px;}
+.task-info{flex:1;min-width:0;}
+.task-meta{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;}
+.task-name{font-size:12px;font-weight:500;color:var(--text);}
+.task-time{font-size:11px;color:var(--text-3);}
+.task-model{font-size:10px;padding:1px 7px;border-radius:100px;background:var(--surface2);border:1px solid var(--border);color:var(--text-3);font-family:'DM Mono',monospace;}
+.task-prompt{font-size:13px;color:var(--text-2);line-height:1.5;word-break:break-word;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;}
+.task-prompt.expanded{display:block;-webkit-line-clamp:unset;}
+.task-prompt-toggle{font-size:11px;color:var(--accent);cursor:pointer;margin-top:3px;display:inline-block;user-select:none;}
+.chip{font-size:10px;padding:2px 8px;border-radius:100px;font-family:'DM Mono',monospace;letter-spacing:.04em;white-space:nowrap;}
+.chip.submitted,.chip.processing{background:var(--amber-dim);color:var(--amber);}
+.chip.completed{background:var(--accent-dim);color:var(--accent);}
+.chip.failed{background:var(--red-dim);color:var(--red);}
+.task-progress{padding:0 16px 10px;}
+.prog-bar{height:2px;background:var(--surface2);border-radius:1px;overflow:hidden;}
+.prog-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .5s ease;}
+.prog-label{font-size:11px;color:var(--text-3);margin-top:4px;}
+.task-video-bar{padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);}
+.video-meta-txt{font-size:11px;color:var(--text-3);}
+.dl-btn{display:flex;align-items:center;gap:5px;padding:6px 14px;background:var(--accent);color:#080809;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;}
+.dl-btn:hover{background:#c8ff6e;}
+.task-error{margin:0 16px 14px;background:var(--red-dim);border:1px solid rgba(255,95,95,.2);border-radius:8px;padding:10px 12px;font-size:12px;color:#ff9999;}
+
+/* ── ADMIN PANEL ── */
+#adminPanel{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:200;align-items:center;justify-content:center;}
+#adminPanel.open{display:flex;}
+.admin-box{background:var(--surface);border:1px solid var(--border-mid);border-radius:var(--r-lg);padding:28px;width:440px;max-width:90vw;}
+.admin-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:600;margin-bottom:6px;}
+.admin-sub{font-size:12px;color:var(--text-3);margin-bottom:24px;}
+.admin-field{margin-bottom:16px;}
+.admin-field label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:6px;}
+.admin-field input{width:100%;background:var(--surface2);border:1px solid var(--border-mid);border-radius:var(--r);padding:11px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;transition:border-color .2s;}
+.admin-field input:focus{border-color:var(--border-hi);}
+.admin-row{display:flex;gap:8px;margin-top:20px;}
+.admin-save{flex:1;padding:12px;background:var(--accent);color:#080809;border:none;border-radius:var(--r);font-family:'Syne',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;}
+.admin-save:hover{background:#c8ff6e;}
+.admin-cancel{padding:12px 18px;background:transparent;border:1px solid var(--border-mid);border-radius:var(--r);color:var(--text-2);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;}
+.admin-cancel:hover{border-color:var(--border-hi);color:var(--text);}
+.admin-msg{font-size:12px;margin-top:10px;min-height:18px;}
+.admin-msg.ok{color:var(--accent);}
+.admin-msg.err{color:var(--red);}
+</style>
+</head>
+<body>
+
+<!-- ── CONFIG BANNER ── -->
+<div id="configBanner" style="display:none">
+  ⚙️ 首次使用：请先 <a onclick="showSetupGuide()">配置 Supabase</a>，然后刷新页面。&nbsp;
+  <span style="color:var(--text-3)">已完成配置？忽略此提示。</span>
+</div>
+
+<!-- ── LOGIN ── -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">NF<span>Vid</span></div>
+    <div class="login-sub">AI Video Studio</div>
+    <div class="login-card">
+      <div class="login-tabs">
+        <button class="login-tab active" onclick="switchLoginTab('team',this)">团队成员</button>
+        <button class="login-tab" onclick="switchLoginTab('admin',this)">管理员</button>
+      </div>
+      <div id="teamLoginForm">
+        <div class="login-field">
+          <label>你的名字</label>
+          <input type="text" id="teamName" placeholder="例：小明" maxlength="20">
+        </div>
+        <div class="login-field">
+          <label>团队密码</label>
+          <input type="password" id="teamPass" placeholder="输入团队密码" onkeydown="if(event.key==='Enter')doLogin('team')">
+        </div>
+      </div>
+      <div id="adminLoginForm" style="display:none">
+        <div class="login-field">
+          <label>管理员密码</label>
+          <input type="password" id="adminPass" placeholder="输入管理员密码" onkeydown="if(event.key==='Enter')doLogin('admin')">
+        </div>
+      </div>
+      <button class="login-btn" onclick="doLogin(currentTab)">进入工作台</button>
+      <div class="login-err" id="loginErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP SHELL ── -->
+<div id="appShell">
+  <div class="topbar">
+    <div class="topbar-logo">NF<span>Vid</span></div>
+    <span id="topbarUser" class="topbar-user"></span>
+    <span id="topbarRole" class="topbar-badge">成员</span>
+    <span id="balanceLabel" style="font-size:12px;color:var(--text-3);font-family:'DM Mono',monospace"></span>
+    <button class="topbar-btn" id="adminBtn" style="display:none" onclick="openAdmin()">⚙ 设置</button>
+    <button class="topbar-btn" onclick="logout()">退出</button>
+  </div>
+
+  <div class="layout">
+    <!-- LEFT: Generate -->
+    <div class="left-panel">
+
+      <!-- Model Tabs -->
+      <div class="model-tabs">
+        <button class="model-tab-btn active" onclick="switchModel('sora2',this)">Sora-2</button>
+        <button class="model-tab-btn" onclick="switchModel('veo-fl',this)">VEO 首尾帧</button>
+        <button class="model-tab-btn" onclick="switchModel('veo-r2v',this)">VEO 多参考图</button>
+        <button class="model-tab-btn" onclick="switchModel('veo-interp',this)">新VEO首尾帧</button>
+      </div>
+
+      <!-- ═══ SORA-2 FORM ═══ -->
+      <div id="form-sora2">
+        <div class="panel-section">
+          <div class="section-label">提示词</div>
+          <div class="field">
+            <textarea id="sora-prompt" rows="5"
+              placeholder="A woman walks through sunlit streets, cinematic look, shallow depth of field, golden hour light..."></textarea>
+            <div class="tip">建议英文。描述：主体 + 动作 + 场景 + 光线 + 镜头风格</div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-label">参考图片 <span style="color:var(--text-3);font-weight:400;font-size:10px;text-transform:none">可选，1张</span></div>
+          <div class="upload-zone" id="soraDropZone"
+            ondragover="dz(event,'over','soraDropZone')"
+            ondragleave="dz(event,'leave','soraDropZone')"
+            ondrop="dz(event,'drop','soraDropZone')">
+            <input type="file" id="soraImgInput" accept="image/jpeg,image/png,image/webp" onchange="handleSoraImg(this.files[0])">
+            <div class="upload-icon">🖼</div>
+            <div class="upload-txt">点击上传 / 拖拽图片</div>
+            <div class="upload-hint">JPG · PNG · WebP · 最大10MB</div>
+          </div>
+          <div id="soraImgPreview" style="display:none;margin-top:10px;text-align:center;">
+            <div style="position:relative;display:inline-block;border-radius:8px;overflow:hidden;border:1px solid var(--border);">
+              <img id="soraImgThumb" style="max-width:160px;max-height:120px;display:block;object-fit:cover;">
+              <button onclick="clearSoraImg()" style="position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.8);border:none;color:#fff;font-size:12px;cursor:pointer;">×</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-label">参数</div>
+          <div class="param-grid" style="margin-bottom:10px;">
+            <div class="param-item">
+              <label>画面比例</label>
+              <div class="seg" id="sora-ratio-seg">
+                <button class="seg-btn active" onclick="pickParam('sora-ratio','16:9',this)">16:9</button>
+                <button class="seg-btn" onclick="pickParam('sora-ratio','9:16',this)">9:16</button>
+                <button class="seg-btn" onclick="pickParam('sora-ratio','1:1',this)">1:1</button>
+              </div>
+            </div>
+            <div class="param-item">
+              <label>时长（秒）</label>
+              <div class="seg" id="sora-dur-seg">
+                <button class="seg-btn active" onclick="pickParam('sora-dur','5',this)">5s</button>
+                <button class="seg-btn" onclick="pickParam('sora-dur','10',this)">10s</button>
+                <button class="seg-btn" onclick="pickParam('sora-dur','15',this)">15s</button>
+                <button class="seg-btn" onclick="pickParam('sora-dur','20',this)">20s</button>
+              </div>
+            </div>
+          </div>
+          <div class="param-grid">
+            <div class="param-item">
+              <label>分辨率</label>
+              <div class="seg" id="sora-res-seg">
+                <button class="seg-btn active" onclick="pickParam('sora-res','480p',this)">480p</button>
+                <button class="seg-btn" onclick="pickParam('sora-res','720p',this)">720p</button>
+                <button class="seg-btn" onclick="pickParam('sora-res','1080p',this)">1080p</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="submit-row">
+          <button class="gen-btn" id="soraGenBtn" onclick="generateSora2()">生成视频</button>
+        </div>
+      </div>
+
+      <!-- ═══ VEO 首尾帧 FORM ═══ -->
+      <div id="form-veo-fl" style="display:none">
+        <div class="panel-section">
+          <div class="section-label">首帧 &amp; 尾帧 <span style="color:var(--red);font-size:10px">必填</span></div>
+          <div class="frame-grid">
+            <div class="frame-slot">
+              <label>首帧（起始画面）</label>
+              <div class="frame-upload" id="flFirstDrop"
+                ondragover="dz(event,'over','flFirstDrop')"
+                ondragleave="dz(event,'leave','flFirstDrop')"
+                ondrop="dz(event,'drop','flFirstDrop','flFirst')">
+                <input type="file" id="flFirstInput" accept="image/jpeg,image/png,image/webp"
+                  onchange="handleFrameImg('first',this.files[0])">
+                <span class="fup-icon">🖼</span>
+                <span class="fup-lbl">首帧</span>
+              </div>
+            </div>
+            <div class="frame-slot">
+              <label>尾帧（结束画面）</label>
+              <div class="frame-upload" id="flLastDrop"
+                ondragover="dz(event,'over','flLastDrop')"
+                ondragleave="dz(event,'leave','flLastDrop')"
+                ondrop="dz(event,'drop','flLastDrop','flLast')">
+                <input type="file" id="flLastInput" accept="image/jpeg,image/png,image/webp"
+                  onchange="handleFrameImg('last',this.files[0])">
+                <span class="fup-icon">🖼</span>
+                <span class="fup-lbl">尾帧</span>
+              </div>
+            </div>
+          </div>
+          <div class="tip" style="margin-top:8px">建议使用同一场景的两张图片，模型将插值生成视频过渡</div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-label">提示词 <span style="color:var(--text-3);font-size:10px;text-transform:none;font-weight:400">可选</span></div>
+          <div class="field">
+            <textarea id="fl-prompt" rows="3" placeholder="描述视频内容或运动方式（可选）..."></textarea>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-label">参数</div>
+          <div class="param-item" style="max-width:200px">
+            <label>画面比例</label>
+            <div class="seg" id="fl-ratio-seg">
+              <button class="seg-btn active" onclick="pickParam('fl-ratio','9:16',this)">9:16</button>
+              <button class="seg-btn" onclick="pickParam('fl-ratio','16:9',this)">16:9</button>
+              <button class="seg-btn" onclick="pickParam('fl-ratio','1:1',this)">1:1</button>
+            </div>
+          </div>
+          <div class="tip" style="margin-top:8px">模型：veo_3_1_i2v_s_fast_portrait_ultra_fl</div>
+        </div>
+
+        <div class="submit-row">
+          <button class="gen-btn" id="flGenBtn" onclick="generateVeoFL()">生成视频</button>
+        </div>
+      </div>
+
+      <!-- ═══ VEO 多参考图 FORM ═══ -->
+      <div id="form-veo-r2v" style="display:none">
+        <div class="panel-section">
+          <div class="section-label">参考图片 <span style="color:var(--text-3);font-size:10px;text-transform:none;font-weight:400">1-4张</span></div>
+          <div class="ref-img-grid" id="refImgGrid">
+            <!-- 4 slots rendered by JS -->
+          </div>
+          <div class="tip" style="margin-top:8px">模型将根据参考图风格/人物/场景生成视频</div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-label">提示词 <span style="color:var(--red);font-size:10px">必填</span></div>
+          <div class="field">
+            <textarea id="r2v-prompt" rows="4"
+              placeholder="Describe the video motion and content based on the reference images..."></textarea>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-label">参数</div>
+          <div class="param-item" style="max-width:200px">
+            <label>画面比例</label>
+            <div class="seg" id="r2v-ratio-seg">
+              <button class="seg-btn active" onclick="pickParam('r2v-ratio','9:16',this)">9:16</button>
+              <button class="seg-btn" onclick="pickParam('r2v-ratio','16:9',this)">16:9</button>
+              <button class="seg-btn" onclick="pickParam('r2v-ratio','1:1',this)">1:1</button>
+            </div>
+          </div>
+          <div class="tip" style="margin-top:8px">模型：veo_3_1_r2v_fast_portrait_ultra</div>
+        </div>
+
+        <div class="submit-row">
+          <button class="gen-btn" id="r2vGenBtn" onclick="generateVeoR2V()">生成视频</button>
+        </div>
+      </div>
+
+      <!-- ═══ 新VEO首尾帧 FORM ═══ -->
+      <div id="form-veo-interp" style="display:none">
+        <div class="panel-section">
+          <div class="section-label">首帧 &amp; 尾帧 <span style="color:var(--red);font-size:10px">必填</span></div>
+          <div class="frame-grid">
+            <div class="frame-slot">
+              <label>首帧（起始画面）</label>
+              <div class="frame-upload" id="interpFirstDrop" style="aspect-ratio:unset;height:180px;"
+                ondragover="dz(event,'over','interpFirstDrop')"
+                ondragleave="dz(event,'leave','interpFirstDrop')"
+                ondrop="dz(event,'drop','interpFirstDrop','interpFirst')">
+                <input type="file" id="interpFirstInput" accept="image/jpeg,image/png,image/webp"
+                  onchange="handleInterpImg('first',this.files[0])">
+                <span class="fup-icon">🖼</span>
+                <span class="fup-lbl">首帧</span>
+              </div>
+            </div>
+            <div class="frame-slot">
+              <label>尾帧（结束画面）</label>
+              <div class="frame-upload" id="interpLastDrop" style="aspect-ratio:unset;height:180px;"
+                ondragover="dz(event,'over','interpLastDrop')"
+                ondragleave="dz(event,'leave','interpLastDrop')"
+                ondrop="dz(event,'drop','interpLastDrop','interpLast')">
+                <input type="file" id="interpLastInput" accept="image/jpeg,image/png,image/webp"
+                  onchange="handleInterpImg('last',this.files[0])">
+                <span class="fup-icon">🖼</span>
+                <span class="fup-lbl">尾帧</span>
+              </div>
+            </div>
+          </div>
+          <div class="tip" style="margin-top:8px">上传首尾两帧，模型将自动插值生成过渡视频</div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-label">提示词 <span style="color:var(--text-3);font-size:10px;text-transform:none;font-weight:400">可选</span></div>
+          <div class="field">
+            <textarea id="interp-prompt" rows="3" placeholder="描述过渡效果（可选，默认：从第一张图过渡到第二张图）..."></textarea>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="section-label">说明</div>
+          <div class="tip">模型：veo_3_1_interpolation_lite_portrait<br>接口：/v1/chat/completions（streaming）<br>图片会压缩至 512px 以内再上传</div>
+        </div>
+
+        <div class="submit-row">
+          <button class="gen-btn" id="interpGenBtn" onclick="generateVeoInterp()">生成视频</button>
+        </div>
+      </div>
+
+    </div>  <!-- end left-panel -->
+
+    <!-- RIGHT: Tasks -->
+    <div class="right-panel">
+      <div class="tasks-header">
+        <div class="tasks-title">任务队列</div>
+        <div class="tasks-count" id="tasksCount"></div>
+        <button class="refresh-btn" onclick="loadTasks()" title="刷新">↻</button>
+      </div>
+      <div class="tasks-body" id="tasksBody">
+        <div class="tasks-empty"><div class="tasks-empty-icon">🎬</div>暂无任务记录</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADMIN PANEL ── -->
+<div id="adminPanel">
+  <div class="admin-box">
+    <div class="admin-title">⚙️ 管理员设置</div>
+    <div class="admin-sub">API Key 加密存储在 Supabase，团队成员不可见。</div>
+    <div class="admin-field">
+      <label>NFVid API Key（用于 sora-2 Bearer 认证 / VEO ?key= 参数）</label>
+      <input type="password" id="adminApiKey" placeholder="输入 newapi.nfvid.vip API Key" autocomplete="off">
+    </div>
+    <div class="admin-field">
+      <label>当前余额（选填，手动填入用于展示）</label>
+      <input type="text" id="adminBalance" placeholder="例：$12.50">
+    </div>
+    <div class="admin-field">
+      <label>新团队密码（留空则不修改）</label>
+      <input type="password" id="newTeamPass" placeholder="不修改请留空">
+    </div>
+    <div class="admin-field">
+      <label>新管理员密码（留空则不修改）</label>
+      <input type="password" id="newAdminPass" placeholder="不修改请留空">
+    </div>
+    <div class="admin-row">
+      <button class="admin-cancel" onclick="closeAdmin()">取消</button>
+      <button class="admin-save" onclick="saveAdmin()">保存设置</button>
+    </div>
+    <div class="admin-msg" id="adminMsg"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// CONFIG — 填入你的 Supabase 信息
+// ══════════════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://slurlmljhwioabwjjwxx.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsdXJsbWxqaHdpb2Fid2pqd3h4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MzMxMTMsImV4cCI6MjA5MTEwOTExM30.ojBrlp6fdC9baZGkiM4oTPW4vovUOeNNV8xxYz-5FIA';
+
+const DEFAULT_TEAM_PASS  = 'nfvid2024';
+const DEFAULT_ADMIN_PASS = 'nfvid-admin-2024';
+
+// ══════════════════════════════════════════════════════════
+let db = null;
+let currentUser = null;
+let currentTab = 'team';
+let selModel = 'sora2';   // 'sora2' | 'veo-fl' | 'veo-r2v'
+let apiKey = '';
+let pollers = {};         // key → intervalId
+
+// 各模型参数状态
+const params = {
+  'sora-ratio': '16:9',
+  'sora-dur':   '5',
+  'sora-res':   '480p',
+  'fl-ratio':   '9:16',
+  'r2v-ratio':  '9:16',
+};
+
+// 图片状态
+let soraImg = null;           // { file, dataUrl, base64 }
+let flFirst = null;           // { file, dataUrl, base64 }
+let flLast  = null;           // { file, dataUrl, base64 }
+let refImgs = [null,null,null,null];  // 最多4张
+
+// ── VEO 模型名称 ──────────────────────────────────────────
+const VEO_FL_MODEL  = 'veo_3_1_i2v_s_fast_portrait_ultra_fl';
+const VEO_R2V_MODEL = 'veo_3_1_r2v_fast_portrait_ultra';
+
+// ── Init ──────────────────────────────────────────────────
+function init() {
+  if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    document.getElementById('configBanner').style.display = 'flex';
+  } else {
+    db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  }
+  renderRefImgGrid();
+}
+init();
+
+function showSetupGuide() {
+  alert(`配置步骤：\n\n1. 去 supabase.com 注册，创建项目\n\n2. SQL Editor 执行建表（如已有直接跳过）：\n\nCREATE TABLE IF NOT EXISTS tasks (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  submitter text, prompt text, model text,\n  ratio text, resolution text, task_id text,\n  status text DEFAULT 'submitted',\n  progress int DEFAULT 0,\n  video_url text, error text,\n  created_at timestamptz DEFAULT now()\n);\n\nCREATE TABLE IF NOT EXISTS settings (\n  key text PRIMARY KEY, value text\n);\n\nALTER TABLE tasks ENABLE ROW LEVEL SECURITY;\nALTER TABLE settings ENABLE ROW LEVEL SECURITY;\n\nCREATE POLICY "all read tasks" ON tasks FOR SELECT USING (true);\nCREATE POLICY "all insert tasks" ON tasks FOR INSERT WITH CHECK (true);\nCREATE POLICY "all update tasks" ON tasks FOR UPDATE USING (true);\nCREATE POLICY "all read settings" ON settings FOR SELECT USING (true);\nCREATE POLICY "all write settings" ON settings FOR ALL USING (true);\n\n3. 初始化密码（SQL Editor）：\nINSERT INTO settings VALUES\n  ('team_pass','nfvid2024'),\n  ('admin_pass','nfvid-admin-2024'),\n  ('nfvid_key',''),\n  ('balance','')\nON CONFLICT(key) DO NOTHING;\n\n4. 把 Project URL 和 anon key 填入本文件顶部\n\n5. 重新部署`);
+}
+
+// ── Login ─────────────────────────────────────────────────
+function switchLoginTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('teamLoginForm').style.display  = tab === 'team'  ? 'block' : 'none';
+  document.getElementById('adminLoginForm').style.display = tab === 'admin' ? 'block' : 'none';
+  document.getElementById('loginErr').textContent = '';
+}
+
+async function doLogin(tab) {
+  const err = document.getElementById('loginErr');
+  err.textContent = '';
+
+  if (!db) {
+    const pass = tab === 'team'
+      ? document.getElementById('teamPass').value
+      : document.getElementById('adminPass').value;
+    if (pass === DEFAULT_TEAM_PASS || pass === DEFAULT_ADMIN_PASS) {
+      const name = tab === 'team'
+        ? (document.getElementById('teamName').value.trim() || '成员')
+        : '管理员';
+      enterApp({ name, role: tab === 'admin' ? 'admin' : 'member' });
+    } else {
+      err.textContent = '密码错误';
+    }
+    return;
+  }
+
+  try {
+    const { data: rows } = await db.from('settings').select('key,value');
+    const cfg = Object.fromEntries((rows || []).map(r => [r.key, r.value]));
+    apiKey = cfg.nfvid_key || '';
+
+    let pass, name, role;
+    if (tab === 'team') {
+      pass = document.getElementById('teamPass').value;
+      name = document.getElementById('teamName').value.trim() || '成员';
+      role = 'member';
+      if (pass !== cfg.team_pass) { err.textContent = '团队密码错误'; return; }
+    } else {
+      pass = document.getElementById('adminPass').value;
+      name = '管理员'; role = 'admin';
+      if (pass !== cfg.admin_pass) { err.textContent = '管理员密码错误'; return; }
+    }
+    if (tab === 'team' && !name) { err.textContent = '请输入你的名字'; return; }
+
+    document.getElementById('balanceLabel').textContent = cfg.balance ? `余额 ${cfg.balance}` : '';
+    enterApp({ name, role });
+  } catch (e) {
+    err.textContent = 'Supabase 连接失败：' + e.message;
+  }
+}
+
+function enterApp(user) {
+  currentUser = user;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  document.getElementById('topbarUser').textContent = user.name;
+  const roleEl = document.getElementById('topbarRole');
+  roleEl.textContent = user.role === 'admin' ? '管理员' : '成员';
+  if (user.role === 'admin') {
+    roleEl.style.cssText = 'background:rgba(91,159,255,0.15);border-color:rgba(91,159,255,0.3);color:var(--blue);';
+    document.getElementById('adminBtn').style.display = '';
+  }
+  loadTasks();
+  setInterval(loadTasks, 8000);
+}
+
+function logout() {
+  currentUser = null;
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appShell').style.display = 'none';
+  ['teamPass','adminPass'].forEach(id => document.getElementById(id).value = '');
+}
+
+// ── Model switching ───────────────────────────────────────
+function switchModel(m, el) {
+  selModel = m;
+  document.querySelectorAll('.model-tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('[id^="form-"]').forEach(f => f.style.display = 'none');
+  const map = { 'sora2': 'sora2', 'veo-fl': 'veo-fl', 'veo-r2v': 'veo-r2v', 'veo-interp': 'veo-interp' };
+  document.getElementById('form-' + map[m]).style.display = '';
+}
+
+function pickParam(key, val, el) {
+  params[key] = val;
+  el.closest('.seg').querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Drag-drop helper ──────────────────────────────────────
+function dz(e, type, zoneId) {
+  e.preventDefault();
+  const zone = document.getElementById(zoneId);
+  if (type === 'over') zone.classList.add('over');
+  else if (type === 'leave') zone.classList.remove('over');
+  else if (type === 'drop') {
+    zone.classList.remove('over');
+    const f = e.dataTransfer.files[0];
+    if (!f) return;
+    if (zoneId === 'soraDropZone') handleSoraImg(f);
+    else if (zoneId === 'flFirstDrop')    handleFrameImg('first', f);
+    else if (zoneId === 'flLastDrop')     handleFrameImg('last', f);
+    else if (zoneId === 'interpFirstDrop') handleInterpImg('first', f);
+    else if (zoneId === 'interpLastDrop')  handleInterpImg('last', f);
+  }
+}
+
+// ── Image loading + 压缩（Canvas，最长边 ≤ 512px，JPEG 75%）────────
+// Vercel Hobby 免费版函数限制 10s，图越小上传越快，超时风险越低
+// 512px @ 75% ≈ 30-80KB/张，4张合计 < 400KB，远低于 4.5MB 限制
+function loadImgToBase64(file, maxSide = 512, quality = 0.75) {
+  return new Promise((resolve, reject) => {
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type)) {
+      reject(new Error(`${file.name} 格式不支持，请用 JPG/PNG/WebP`)); return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      reject(new Error(`${file.name} 超过10MB`)); return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('读取文件失败'));
+    reader.onload = e => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('图片解码失败'));
+      img.onload = () => {
+        let { width, height } = img;
+        // 等比缩放到 maxSide
+        if (width > maxSide || height > maxSide) {
+          if (width >= height) { height = Math.round(height * maxSide / width); width = maxSide; }
+          else { width = Math.round(width * maxSide / height); height = maxSide; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        // PNG 保持 PNG，其余输出 JPEG
+        const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        const dataUrl = canvas.toDataURL(mimeType, quality);
+        const base64 = dataUrl.split(',')[1];
+        resolve({ file, dataUrl, base64, mimeType });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Sora-2 image ─────────────────────────────────────────
+async function handleSoraImg(file) {
+  if (!file) return;
+  try {
+    soraImg = await loadImgToBase64(file);
+    document.getElementById('soraDropZone').style.display = 'none';
+    const prev = document.getElementById('soraImgPreview');
+    prev.style.display = 'block';
+    document.getElementById('soraImgThumb').src = soraImg.dataUrl;
+  } catch (e) { alert(e.message); }
+}
+function clearSoraImg() {
+  soraImg = null;
+  document.getElementById('soraDropZone').style.display = '';
+  document.getElementById('soraImgPreview').style.display = 'none';
+  document.getElementById('soraImgInput').value = '';
+}
+
+// ── VEO首尾帧 frames ──────────────────────────────────────
+async function handleFrameImg(which, file) {
+  if (!file) return;
+  try {
+    const img = await loadImgToBase64(file);
+    if (which === 'first') {
+      flFirst = img;
+      renderFrameSlot('flFirstDrop', 'flFirstInput', img.dataUrl, () => clearFrame('first'));
+    } else {
+      flLast = img;
+      renderFrameSlot('flLastDrop', 'flLastInput', img.dataUrl, () => clearFrame('last'));
+    }
+  } catch (e) { alert(e.message); }
+}
+function renderFrameSlot(dropId, inputId, dataUrl, onRemove) {
+  const slot = document.getElementById(dropId);
+  // keep drag events, add preview img
+  slot.style.padding = '0';
+  slot.style.overflow = 'hidden';
+  let img = slot.querySelector('img');
+  if (!img) { img = document.createElement('img'); slot.appendChild(img); }
+  img.src = dataUrl;
+  img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:8px;';
+  // Add remove button
+  let rmBtn = slot.querySelector('.fup-rm');
+  if (!rmBtn) {
+    rmBtn = document.createElement('button');
+    rmBtn.className = 'fup-rm';
+    rmBtn.textContent = '×';
+    slot.appendChild(rmBtn);
+  }
+  rmBtn.onclick = e => { e.preventDefault(); onRemove(); };
+  // Hide placeholder text
+  slot.querySelectorAll('.fup-icon,.fup-lbl').forEach(el => el.style.display = 'none');
+}
+function clearFrame(which) {
+  if (which === 'first') {
+    flFirst = null;
+    resetFrameSlot('flFirstDrop', 'flFirstInput', '首帧');
+  } else {
+    flLast = null;
+    resetFrameSlot('flLastDrop', 'flLastInput', '尾帧');
+  }
+}
+function resetFrameSlot(dropId, inputId, label) {
+  const slot = document.getElementById(dropId);
+  slot.style.padding = '10px';
+  slot.style.overflow = '';
+  const img = slot.querySelector('img'); if (img) img.remove();
+  const rmBtn = slot.querySelector('.fup-rm'); if (rmBtn) rmBtn.remove();
+  slot.querySelectorAll('.fup-icon,.fup-lbl').forEach(el => el.style.display = '');
+  document.getElementById(inputId).value = '';
+}
+
+// ── VEO多参考图 grid ──────────────────────────────────────
+function renderRefImgGrid() {
+  const grid = document.getElementById('refImgGrid');
+  if (!grid) return;
+  grid.innerHTML = refImgs.map((img, i) => {
+    if (img) {
+      return `<div class="ref-img-item">
+        <img src="${img.dataUrl}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">
+        <button class="slot-rm" onclick="clearRefImg(${i})">×</button>
+      </div>`;
+    } else {
+      return `<div class="ref-img-item">
+        <input type="file" accept="image/jpeg,image/png,image/webp" onchange="handleRefImg(${i},this.files[0])">
+        <span class="slot-plus">+</span>
+      </div>`;
+    }
+  }).join('');
+}
+async function handleRefImg(idx, file) {
+  if (!file) return;
+  try {
+    refImgs[idx] = await loadImgToBase64(file);
+    renderRefImgGrid();
+  } catch (e) { alert(e.message); }
+}
+function clearRefImg(idx) {
+  refImgs[idx] = null;
+  renderRefImgGrid();
+}
+
+// ── Generate: Sora-2 ──────────────────────────────────────
+async function generateSora2() {
+  const prompt = document.getElementById('sora-prompt').value.trim();
+  if (!prompt) { document.getElementById('sora-prompt').focus(); return; }
+  if (!apiKey) { alert(db ? 'API Key 未设置，请管理员配置' : '请先配置 Supabase'); return; }
+
+  const btn = document.getElementById('soraGenBtn');
+  btn.disabled = true; btn.textContent = '提交中...';
+
+  const durSec = parseInt(params['sora-dur'], 10);
+  const ratio  = params['sora-ratio'];
+
+  try {
+    // Gemini contents 格式（newapi.nfvid.vip 统一格式）
+    const parts = [{ text: prompt }];
+    if (soraImg) {
+      parts.push({ inlineData: { mimeType: soraImg.mimeType, data: soraImg.base64 } });
+    }
+    const body = {
+      model: 'sora-2',
+      contents: [{ role: 'user', parts }],
+      generationConfig: {
+        responseModalities: ['video'],
+        videoConfig: {
+          durationSeconds: durSec,
+          aspectRatio: ratio
+        }
+      }
+    };
+
+    const r = await fetch('/api/nf-generate', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error?.message || j.error || j.message || `HTTP ${r.status}`);
+
+    btn.textContent = '生成中...';
+
+    // 统一走 handleVeoResponse：兼容直接完成 / operation / task_id
+    await handleVeoResponse(j, prompt, 'sora-2', ratio, params['sora-res'], true);
+
+  } catch (e) {
+    alert('生成失败：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '生成视频';
+  }
+}
+
+// ── Generate: VEO 首尾帧 ─────────────────────────────────
+async function generateVeoFL() {
+  if (!flFirst || !flLast) { alert('请上传首帧和尾帧图片'); return; }
+  if (!apiKey) { alert(db ? 'API Key 未设置，请管理员配置' : '请先配置 Supabase'); return; }
+
+  const btn = document.getElementById('flGenBtn');
+  btn.disabled = true; btn.textContent = '生成中（约1-3分钟）...';
+  const prompt = document.getElementById('fl-prompt').value.trim();
+  const ratio  = params['fl-ratio'];
+
+  try {
+    // Gemini contents 格式：首帧 + 尾帧 + 可选文字
+    const parts = [
+      { inlineData: { mimeType: flFirst.mimeType, data: flFirst.base64 } },
+      { inlineData: { mimeType: flLast.mimeType,  data: flLast.base64  } },
+    ];
+    if (prompt) parts.push({ text: prompt });
+    const body = {
+      contents: [{ role: 'user', parts }],
+      generationConfig: {
+        responseModalities: ['video'],
+        videoConfig: { durationSeconds: 8, aspectRatio: ratio }
+      }
+    };
+
+    // 直接从浏览器调 VEO API，绕过 Vercel 60s 超时限制
+    // VEO 同步生成约 1-3 分钟，浏览器可以等，Vercel 代理不行
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 210000); // 3.5 分钟
+
+    let r;
+    try {
+      r = await fetch(
+        `https://newapi.nfvid.vip/v1beta/models/${encodeURIComponent(VEO_FL_MODEL)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal:ctrl.signal }
+      );
+    } catch (netErr) {
+      clearTimeout(timer);
+      if (netErr.name === 'AbortError') throw new Error('视频生成超时（>3.5分钟），请重试');
+      throw new Error('网络请求失败：' + netErr.message + '（如提示 CORS，请联系管理员）');
+    }
+    clearTimeout(timer);
+
+    let j;
+    try { j = await r.json(); }
+    catch (_) { throw new Error(`API 返回无效响应（HTTP ${r.status}）`); }
+    if (!r.ok) throw new Error(j.error?.message || j.error || `HTTP ${r.status}`);
+
+    await handleVeoResponse(j, prompt, 'veo3.1-fl', ratio);
+
+  } catch (e) {
+    alert('生成失败：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '生成视频';
+  }
+}
+
+// ── Generate: VEO 多参考图 ───────────────────────────────
+async function generateVeoR2V() {
+  const prompt = document.getElementById('r2v-prompt').value.trim();
+  if (!prompt) { document.getElementById('r2v-prompt').focus(); return; }
+  const filled = refImgs.filter(Boolean);
+  if (!filled.length) { alert('请至少上传1张参考图片'); return; }
+  if (!apiKey) { alert(db ? 'API Key 未设置，请管理员配置' : '请先配置 Supabase'); return; }
+
+  const btn = document.getElementById('r2vGenBtn');
+  btn.disabled = true; btn.textContent = '生成中（约1-3分钟）...';
+  const ratio = params['r2v-ratio'];
+
+  try {
+    // Gemini contents 格式：多张参考图 + 提示词
+    const parts = filled.map(img => ({
+      inlineData: { mimeType: img.mimeType, data: img.base64 }
+    }));
+    parts.push({ text: prompt });
+    const body = {
+      contents: [{ role: 'user', parts }],
+      generationConfig: {
+        responseModalities: ['video'],
+        videoConfig: { aspectRatio: ratio }
+      }
+    };
+
+    // 直接从浏览器调 VEO API，绕过 Vercel 60s 超时限制
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 210000); // 3.5 分钟
+
+    let r;
+    try {
+      r = await fetch(
+        `https://newapi.nfvid.vip/v1beta/models/${encodeURIComponent(VEO_R2V_MODEL)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body), signal:ctrl.signal }
+      );
+    } catch (netErr) {
+      clearTimeout(timer);
+      if (netErr.name === 'AbortError') throw new Error('视频生成超时（>3.5分钟），请重试');
+      throw new Error('网络请求失败：' + netErr.message + '（如提示 CORS，请联系管理员）');
+    }
+    clearTimeout(timer);
+
+    let j;
+    try { j = await r.json(); }
+    catch (_) { throw new Error(`API 返回无效响应（HTTP ${r.status}）`); }
+    if (!r.ok) throw new Error(j.error?.message || j.error || `HTTP ${r.status}`);
+
+    await handleVeoResponse(j, prompt, 'veo3.1-r2v', ratio);
+
+  } catch (e) {
+    alert('生成失败：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '生成视频';
+  }
+}
+
+// ── 统一响应处理（VEO + sora-2 共用）────────────────────────
+// isSora: 若为 true，operation 轮询走 nf-task（/v1/videos/{id}）；否则走 nf-veo-task
+// ── Image compress helper ─────────────────────────────────
+async function compressImgToBase64(imgObj, maxPx = 512) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' });
+    };
+    img.src = imgObj.dataUrl;
+  });
+}
+
+// ── Handle: VEO 插值 图片 ────────────────────────────────
+let interpFirst = null;
+let interpLast  = null;
+
+async function handleInterpImg(which, file) {
+  if (!file) return;
+  const allowed = ['image/jpeg','image/png','image/webp'];
+  if (!allowed.includes(file.type)) { alert('请上传 JPG / PNG / WebP 图片'); return; }
+  const img = await loadImgToBase64(file);
+  if (which === 'first') {
+    interpFirst = img;
+    renderFrameSlot('interpFirstDrop', 'interpFirstInput', img.dataUrl, () => clearInterpFrame('first'));
+  } else {
+    interpLast = img;
+    renderFrameSlot('interpLastDrop', 'interpLastInput', img.dataUrl, () => clearInterpFrame('last'));
+  }
+}
+
+function clearInterpFrame(which) {
+  if (which === 'first') {
+    interpFirst = null;
+    resetFrameSlot('interpFirstDrop', 'interpFirstInput', '首帧');
+  } else {
+    interpLast = null;
+    resetFrameSlot('interpLastDrop', 'interpLastInput', '尾帧');
+  }
+}
+
+// ── Generate: VEO 插值 ───────────────────────────────────
+async function generateVeoInterp() {
+  if (!interpFirst || !interpLast) { alert('请上传首帧和尾帧图片'); return; }
+  if (!apiKey) { alert(db ? 'API Key 未设置，请管理员配置' : '请先配置 Supabase'); return; }
+
+  const btn = document.getElementById('interpGenBtn');
+  btn.disabled = true; btn.textContent = '生成中（约1-3分钟）...';
+  const promptText = document.getElementById('interp-prompt').value.trim() || '从第一张图过渡到第二张图';
+
+  try {
+    // 压缩图片（避免 base64 过大）
+    btn.textContent = '压缩图片中...';
+    const firstComp = await compressImgToBase64(interpFirst, 512);
+    const lastComp  = await compressImgToBase64(interpLast,  512);
+
+    btn.textContent = '生成中（约1-3分钟）...';
+
+    const body = {
+      model: 'veo_3_1_interpolation_lite_portrait',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: promptText },
+          { type: 'image_url', image_url: { url: `data:${firstComp.mimeType};base64,${firstComp.base64}` } },
+          { type: 'image_url', image_url: { url: `data:${lastComp.mimeType};base64,${lastComp.base64}` } }
+        ]
+      }],
+      stream: true
+    };
+
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 210000);
+
+    let resp;
+    try {
+      resp = await fetch('https://newapi.nfvid.vip/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body),
+        signal: ctrl.signal
+      });
+    } catch (netErr) {
+      clearTimeout(timer);
+      if (netErr.name === 'AbortError') throw new Error('请求超时（>3.5分钟），请重试');
+      throw netErr;
+    }
+    clearTimeout(timer);
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`HTTP ${resp.status}: ${errText.slice(0, 200)}`);
+    }
+
+    // 读取 SSE 流
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let videoUrl = null;
+    let allChunks = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') continue;
+        try {
+          const chunk = JSON.parse(raw);
+          allChunks.push(chunk);
+
+          // 尝试标准 OpenAI 格式
+          const delta = chunk.choices?.[0]?.delta?.content || chunk.choices?.[0]?.message?.content;
+          // 尝试 Google Gemini 格式
+          const parts = chunk.candidates?.[0]?.content?.parts;
+          // 从各种位置提取 video url
+          const u = extractAnyVideoUrl(chunk) ||
+                    (typeof delta === 'string' && delta.startsWith('http') ? delta : null);
+          if (u) videoUrl = u;
+        } catch(e) { /* 忽略非JSON行 */ }
+      }
+    }
+
+    // 打印完整响应供调试
+    console.log('[VEO-INTERP] 全部 chunks:', JSON.stringify(allChunks).slice(0, 2000));
+
+    if (!videoUrl) {
+      // 尝试从最后一个 chunk 提取
+      const lastChunk = allChunks[allChunks.length - 1];
+      videoUrl = extractAnyVideoUrl(lastChunk);
+      console.log('[VEO-INTERP] lastChunk:', JSON.stringify(lastChunk));
+    }
+
+    if (videoUrl) {
+      const record = {
+        submitter: currentUser.name, prompt: promptText,
+        model: 'veo-interp', ratio: '9:16', resolution: '',
+        task_id: 'interp-' + Date.now(),
+        status: 'completed', progress: 100, video_url: videoUrl
+      };
+      if (db) await db.from('tasks').insert(record);
+      loadTasks();
+    } else {
+      console.warn('[VEO-INTERP] 未找到视频URL，完整响应:', JSON.stringify(allChunks));
+      throw new Error('未获取到视频链接，请检查控制台日志（F12）发给技术人员');
+    }
+
+  } catch (e) {
+    alert('生成失败：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '生成视频';
+  }
+}
+
+async function handleVeoResponse(j, prompt, modelName, ratio, resolution = '', isSora = false) {
+  // 情况1：直接有视频（同步完成）
+  const videoUrl = extractAnyVideoUrl(j);
+  if (videoUrl) {
+    const record = {
+      submitter: currentUser.name, prompt,
+      model: modelName, ratio, resolution,
+      task_id: 'sync-' + Date.now(),
+      status: 'completed', progress: 100, video_url: videoUrl
+    };
+    if (db) await db.from('tasks').insert(record);
+    loadTasks();
+    return;
+  }
+
+  // 情况2：异步，有 operation name 或 task_id
+  const opId = j.name || j.task_id || j.id || j.metadata?.name;
+  if (!opId) throw new Error('未获取到任务标识，响应：' + JSON.stringify(j).slice(0, 200));
+
+  const record = {
+    submitter: currentUser.name, prompt,
+    model: modelName, ratio, resolution,
+    task_id: opId,
+    status: 'submitted', progress: 5
+  };
+  let localId = null;
+  if (db) {
+    const { data } = await db.from('tasks').insert(record).select('id');
+    localId = data?.[0]?.id;
+  }
+  loadTasks();
+  // sora-2 先尝试 nf-task（/v1/videos/{id}），其余走 nf-veo-task（操作轮询）
+  if (isSora) {
+    pollSoraTask(opId, localId);
+  } else {
+    pollVeoTask(opId, localId);
+  }
+}
+
+// ── Poll: Sora-2 ─────────────────────────────────────────
+function pollSoraTask(taskId, localId) {
+  if (pollers[taskId]) clearInterval(pollers[taskId]);
+  let attempts = 0;
+  pollers[taskId] = setInterval(async () => {
+    attempts++;
+    const prog = Math.min(10 + attempts * 5, 90);
+    try {
+      const r = await fetch(`/api/nf-task?id=${encodeURIComponent(taskId)}`, {
+        headers: { 'Authorization': `Bearer ${apiKey}` }
+      });
+      const j = await r.json();
+
+      // 兼容多种状态字段名
+      const status = (j.status || j.data?.status || '').toLowerCase();
+
+      if (status === 'succeeded' || status === 'completed' || status === 'success') {
+        clearInterval(pollers[taskId]); delete pollers[taskId];
+
+        // 尝试从响应中提取视频URL（兼容 Gemini candidates 和其他格式）
+        let videoUrl = extractAnyVideoUrl(j);
+        // 若 API 不在响应里放 URL，用 /content 端点下载
+        if (!videoUrl) videoUrl = 'SORA_CONTENT:' + taskId;
+
+        if (db && localId) {
+          await db.from('tasks').update({ status:'completed', progress:100, video_url:videoUrl }).eq('id', localId);
+        }
+        loadTasks();
+
+      } else if (status === 'failed' || status === 'cancelled' || status === 'error') {
+        clearInterval(pollers[taskId]); delete pollers[taskId];
+        const errMsg = j.error?.message || j.data?.error || j.message || '生成失败';
+        if (db && localId) {
+          await db.from('tasks').update({ status:'failed', error:errMsg }).eq('id', localId);
+        }
+        loadTasks();
+
+      } else {
+        if (db && localId) {
+          await db.from('tasks').update({ status:'processing', progress:prog }).eq('id', localId);
+        }
+      }
+    } catch (e) { /* retry silently */ }
+  }, 5000);
+}
+
+// ── Poll: VEO ────────────────────────────────────────────
+function pollVeoTask(opId, localId) {
+  if (pollers[opId]) clearInterval(pollers[opId]);
+  let attempts = 0;
+  pollers[opId] = setInterval(async () => {
+    attempts++;
+    const prog = Math.min(10 + attempts * 5, 90);
+    try {
+      const r = await fetch(
+        `/api/nf-veo-task?operation=${encodeURIComponent(opId)}&key=${encodeURIComponent(apiKey)}`
+      );
+      const j = await r.json();
+
+      // 检查是否完成
+      const isDone  = j.done === true;
+      const hasFail = !!(j.error || (j.done && !j.response && !extractVeoVideoUrl(j)));
+
+      if (isDone && !hasFail) {
+        clearInterval(pollers[opId]); delete pollers[opId];
+        const videoUrl = extractAnyVideoUrl(j) || '';
+        if (db && localId) {
+          await db.from('tasks').update({ status:'completed', progress:100, video_url:videoUrl }).eq('id', localId);
+        }
+        loadTasks();
+
+      } else if (hasFail) {
+        clearInterval(pollers[opId]); delete pollers[opId];
+        const errMsg = j.error?.message || j.error || '生成失败';
+        if (db && localId) {
+          await db.from('tasks').update({ status:'failed', error:errMsg }).eq('id', localId);
+        }
+        loadTasks();
+
+      } else {
+        // 有些API直接在轮询响应里有状态
+        const status = (j.status || j.metadata?.state || '').toLowerCase();
+        if (status === 'succeeded' || status === 'completed') {
+          clearInterval(pollers[opId]); delete pollers[opId];
+          const videoUrl = extractAnyVideoUrl(j) || '';
+          if (db && localId) {
+            await db.from('tasks').update({ status:'completed', progress:100, video_url:videoUrl }).eq('id', localId);
+          }
+          loadTasks();
+        } else if (status === 'failed') {
+          clearInterval(pollers[opId]); delete pollers[opId];
+          if (db && localId) await db.from('tasks').update({ status:'failed', error:'生成失败' }).eq('id', localId);
+          loadTasks();
+        } else {
+          if (db && localId) {
+            await db.from('tasks').update({ status:'processing', progress:prog }).eq('id', localId);
+          }
+        }
+      }
+    } catch (e) { /* retry silently */ }
+  }, 5000);
+}
+
+// ── Video URL 统一提取（Gemini candidates + Vertex AI + 直接字段）────
+function extractAnyVideoUrl(j) {
+  if (!j) return null;
+  const resp = j.response || j;
+
+  // Format 1: Gemini candidates（generateContent 直接返回或轮询完成后 response 里）
+  const candidates = resp.candidates || j.candidates || [];
+  if (candidates.length > 0) {
+    const parts = candidates[0]?.content?.parts || [];
+    for (const p of parts) {
+      if (p.fileData?.fileUri)     return p.fileData.fileUri;
+      if (p.fileData?.file_uri)    return p.fileData.file_uri;
+      if (p.inlineData?.data)      return `data:video/mp4;base64,${p.inlineData.data}`;
+    }
+  }
+
+  // Format 2: generatedSamples（Vertex AI Veo）
+  const samples = resp.generatedSamples || j.generatedSamples || [];
+  if (samples.length > 0) {
+    const v = samples[0]?.video;
+    if (v?.uri)          return v.uri;
+    if (v?.url)          return v.url;
+    if (v?.encodedVideo) return `data:video/mp4;base64,${v.encodedVideo}`;
+  }
+
+  // Format 3: predictions array
+  const preds = resp.predictions || j.predictions || [];
+  if (preds.length > 0) {
+    const p = preds[0];
+    if (p?.video?.uri)          return p.video.uri;
+    if (p?.video?.url)          return p.video.url;
+    if (p?.videoUri)            return p.videoUri;
+    if (p?.url)                 return p.url;
+    if (p?.video?.encodedVideo) return `data:video/mp4;base64,${p.video.encodedVideo}`;
+  }
+
+  // Format 4: sora-2 videos array
+  const d = j.data || j;
+  if (Array.isArray(d.videos) && d.videos.length > 0) {
+    const v = d.videos[0];
+    return typeof v === 'string' ? v : (v?.url || v?.download_url || null);
+  }
+  let r = d.result;
+  if (typeof r === 'string') { try { r = JSON.parse(r); } catch (e) {} }
+  if (Array.isArray(r) && r.length > 0) return typeof r[0] === 'string' ? r[0] : null;
+
+  // Format 5: flat URL fields
+  return resp.videoUrl || j.videoUrl || resp.video_url || j.video_url
+    || d.video_url || d.url || d.download_url || null;
+}
+
+// 保留旧名称供 pollSoraTask 使用
+function extractSoraVideoUrl(j) { return extractAnyVideoUrl(j); }
+function extractVeoVideoUrl(j)  { return extractAnyVideoUrl(j); }
+
+// ── Load & render tasks ───────────────────────────────────
+async function loadTasks() {
+  const body = document.getElementById('tasksBody');
+  if (!db) {
+    body.innerHTML = '<div class="tasks-empty"><div class="tasks-empty-icon">🔌</div>连接 Supabase 后显示团队任务</div>';
+    return;
+  }
+  try {
+    const { data: tasks } = await db.from('tasks')
+      .select('*').order('created_at', { ascending: false }).limit(50);
+    document.getElementById('tasksCount').textContent = tasks?.length ? `${tasks.length} 条` : '';
+    if (!tasks?.length) {
+      body.innerHTML = '<div class="tasks-empty"><div class="tasks-empty-icon">🎬</div>暂无任务记录，提交第一个吧</div>';
+      return;
+    }
+    body.innerHTML = tasks.map(t => renderTask(t)).join('');
+  } catch (e) { console.error(e); }
+}
+
+function renderTask(t) {
+  const ago = timeAgo(t.created_at);
+  const initials = t.submitter?.[0]?.toUpperCase() || '?';
+  const statusLabel = { submitted:'提交中', processing:'生成中', completed:'完成', failed:'失败' };
+  const statusChip = `<span class="chip ${t.status}">${statusLabel[t.status] || t.status}</span>`;
+
+  let extra = '';
+
+  if (t.status === 'processing' || t.status === 'submitted') {
+    const pct = t.progress || 5;
+    extra = `<div class="task-progress">
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+      <div class="prog-label">生成中 · ${pct}%</div>
+    </div>`;
+  }
+
+  if (t.status === 'completed') {
+    const dlBtn = buildDownloadBtn(t);
+    const metaStr = [t.ratio, t.resolution, t.model].filter(Boolean).join(' · ');
+    extra = `<div class="task-video-bar">
+      <span class="video-meta-txt">${esc(metaStr)}</span>
+      ${dlBtn}
+    </div>`;
+  }
+
+  if (t.status === 'failed') {
+    extra = `<div class="task-error">⚠️ ${esc(t.error || '生成失败')}</div>`;
+  }
+
+  return `<div class="task-card ${(t.status==='processing'||t.status==='submitted')?'active-task':''}">
+    <div class="task-header">
+      <div class="task-avatar">${esc(initials)}</div>
+      <div class="task-info">
+        <div class="task-meta">
+          <span class="task-name">${esc(t.submitter || '')}</span>
+          ${statusChip}
+          <span class="task-model">${esc(t.model || '')}</span>
+          <span class="task-time">${ago}</span>
+        </div>
+        <div class="task-prompt" id="prompt-${t.id}">${esc(t.prompt || '')}</div>
+        ${t.prompt && t.prompt.length > 60
+          ? `<span class="task-prompt-toggle" onclick="togglePrompt('${t.id}',this)">展开</span>`
+          : ''}
+      </div>
+    </div>
+    ${extra}
+  </div>`;
+}
+
+// ── 构建下载按钮（防注入 + 多格式兼容）─────────────────────
+function buildDownloadBtn(t) {
+  if (!t.video_url && t.model !== 'sora-2') return '';
+
+  // sora-2 特殊：通过认证代理下载
+  if (t.model === 'sora-2') {
+    const tid = t.task_id || '';
+    // 提取 SORA_CONTENT: 前缀后的 task_id
+    const realId = (t.video_url || '').startsWith('SORA_CONTENT:')
+      ? (t.video_url.slice('SORA_CONTENT:'.length) || tid)
+      : tid;
+    if (!realId) return '';
+    // 用 JSON.stringify 序列化确保不会被引号截断
+    return `<button class="dl-btn" onclick='downloadSoraVideo(${JSON.stringify(realId)},this)'>↓ 下载视频</button>`;
+  }
+
+  // VEO / 其他：普通 CDN URL
+  let url = t.video_url || '';
+  // 清洗：去除多余引号、JSON 数组
+  url = url.trim().replace(/^["']|["']$/g, '');
+  if (url.startsWith('[')) { try { url = JSON.parse(url)[0] || url; } catch (e) {} }
+  if (!url) return '';
+
+  return `<button class="dl-btn" onclick='downloadVideo(${JSON.stringify(url)},this)'>↓ 下载视频</button>`;
+}
+
+// ── Download: CDN URL（fetch+blob，降级代理）────────────────
+async function downloadVideo(rawUrl, btn) {
+  let url = rawUrl;
+  url = url.trim().replace(/^["']|["']$/g, '');
+  if (url.startsWith('[')) { try { url = JSON.parse(url)[0]; } catch (e) {} }
+  if (!url) return;
+
+  const orig = btn.innerHTML;
+  btn.textContent = '下载中...'; btn.style.pointerEvents = 'none';
+
+  try {
+    // 1. 尝试直接 fetch（CDN 有 CORS 时可用）
+    let resp = await fetch(url);
+    if (!resp.ok) throw new Error('direct fetch failed');
+    const blob = await resp.blob();
+    triggerBlobDownload(blob, 'video.mp4');
+  } catch (_) {
+    try {
+      // 2. 降级：走本站 /api/download 代理（不需要 auth）
+      const resp = await fetch(`/api/download?url=${encodeURIComponent(url)}`);
+      if (!resp.ok) throw new Error('proxy failed');
+      const blob = await resp.blob();
+      triggerBlobDownload(blob, 'video.mp4');
+    } catch (_2) {
+      // 3. 最终降级：新标签页（用户手动保存）
+      window.open(url, '_blank');
+    }
+  } finally {
+    btn.innerHTML = orig; btn.style.pointerEvents = '';
+  }
+}
+
+// ── Download: Sora-2（需要 Bearer 认证）───────────────────
+async function downloadSoraVideo(taskId, btn) {
+  if (!taskId) return;
+  const orig = btn.innerHTML;
+  btn.textContent = '下载中...'; btn.style.pointerEvents = 'none';
+
+  try {
+    const resp = await fetch(`/api/nf-content?id=${encodeURIComponent(taskId)}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}` }
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${await resp.text()}`);
+    const blob = await resp.blob();
+    triggerBlobDownload(blob, 'sora-video.mp4');
+  } catch (e) {
+    alert('下载失败：' + e.message);
+  } finally {
+    btn.innerHTML = orig; btn.style.pointerEvents = '';
+  }
+}
+
+function triggerBlobDownload(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 15000);
+}
+
+// ── Admin ─────────────────────────────────────────────────
+function openAdmin()  { document.getElementById('adminPanel').classList.add('open'); }
+function closeAdmin() {
+  document.getElementById('adminPanel').classList.remove('open');
+  document.getElementById('adminMsg').textContent = '';
+}
+
+async function saveAdmin() {
+  const msg = document.getElementById('adminMsg');
+  msg.textContent = ''; msg.className = 'admin-msg';
+  if (!db) { msg.textContent = '请先配置 Supabase'; msg.className = 'admin-msg err'; return; }
+
+  const newKey   = document.getElementById('adminApiKey').value.trim();
+  const balance  = document.getElementById('adminBalance').value.trim();
+  const teamPass = document.getElementById('newTeamPass').value;
+  const admPass  = document.getElementById('newAdminPass').value;
+
+  try {
+    const updates = [];
+    if (newKey)   { updates.push({ key:'nfvid_key',  value:newKey   }); apiKey = newKey; }
+    if (balance)    updates.push({ key:'balance',      value:balance   });
+    if (teamPass)   updates.push({ key:'team_pass',    value:teamPass  });
+    if (admPass)    updates.push({ key:'admin_pass',   value:admPass   });
+
+    for (const u of updates) {
+      await db.from('settings').upsert(u, { onConflict:'key' });
+    }
+    if (balance) document.getElementById('balanceLabel').textContent = `余额 ${balance}`;
+    msg.textContent = '✓ 保存成功'; msg.className = 'admin-msg ok';
+    document.getElementById('adminApiKey').value = '';
+    document.getElementById('newTeamPass').value = '';
+    document.getElementById('newAdminPass').value = '';
+  } catch (e) {
+    msg.textContent = '保存失败：' + e.message; msg.className = 'admin-msg err';
+  }
+}
+
+// ── Utils ─────────────────────────────────────────────────
+function esc(s = '') {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function togglePrompt(id, btn) {
+  const el = document.getElementById('prompt-' + id);
+  const ex = el.classList.toggle('expanded');
+  btn.textContent = ex ? '收起' : '展开';
+}
+function timeAgo(ts) {
+  const sec = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (sec < 60) return '刚刚';
+  if (sec < 3600) return `${Math.floor(sec/60)}分钟前`;
+  if (sec < 86400) return `${Math.floor(sec/3600)}小时前`;
+  const d = new Date(ts); return `${d.getMonth()+1}/${d.getDate()}`;
+}
+</script>
+</body>
+</html>
